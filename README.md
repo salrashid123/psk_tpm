@@ -98,22 +98,21 @@ You can either use the swtpm built into this repo, or uncomment the sections bel
 cd client/
 #rm -rf myvtpm && mkdir myvtpm && swtpm_setup --tpmstate myvtpm --tpm2 --ecc  --create-ek-cert
 swtpm socket --tpmstate dir=myvtpm --tpm2 --server type=tcp,port=2321 --ctrl type=tcp,port=2322 --flags not-need-init,startup-clear --log level=5
-
-# export secret="my_api_key"
-# echo -n $secret > hmac.key
-# hexkey=$(xxd -p -c 256 < hmac.key)
-# echo $hexkey
-#   6d795f6170695f6b6579
 ```
 
-the hex key we're using is `6d795f6170695f6b6579`.  Since this is a demo, we're just going to assume the server knows this value too
+Import the key using `tpm2_tools` but if you just want to use the default swtpm here, *skip this step* entirely
 
-Import the key using `tpm2_tools` but if you just want to use the default swtpm here, skip this step entirely
+The hex key we're using is `6d795f6170695f6b6579`.  Since this is a demo, we're just going to assume the server knows this value too
 
 ```bash
 export TPM2TOOLS_TCTI="swtpm:port=2321"
 export TPM2OPENSSL_TCTI="swtpm:port=2321"
 
+export secret="my_api_key"
+echo -n $secret > hmac.key
+hexkey=$(xxd -p -c 256 < hmac.key)
+echo $hexkey
+#   6d795f6170695f6b6579
 
 printf '\x00\x00' > unique.dat
 tpm2_createprimary -C o -G ecc  -g sha256  -c primary.ctx -a "fixedtpm|fixedparent|sensitivedataorigin|userwithauth|noda|restricted|decrypt" -u unique.dat
