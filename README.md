@@ -40,21 +40,23 @@ the full flow is something like this
 }
 ```
 
-3. Client creates and hmac using this JSON as the message to mac
+3. Client creates an hmac using the JSON message
 
    `psk_key = tpm2_hmac( key=tpm_key, message=json_message )`
 
 4. Client initiates TLS PSK session
 
-   set the Ppsk as the JSON message
+   set the `PSK Identity` as the JSON message
 
-   set the PSK Key to use as `psk_key`
+   set actual `PSK` to use as `psk_key`
 
    Note the TLS message here is over cleartext; its just setting up the session
 
-5. Server reads the PSK ClientID JSON
+5. Server reads the `PSK Identity` which is the `json_message`
 
    Server parses the JSON message and extracts the `iss` field
+
+   Server can validate other fields here (`aud`, `jti`, `iat`, `exp`)
 
 6. Server looksup the HMAC key in the database for the `iss`
 
@@ -64,7 +66,7 @@ the full flow is something like this
 
 8. Server responds back to the TLS PSK session using the derived `psk_key`
 
-9. TLS Session established since both ends use the same PSK
+9. TLS Session established since both ends use the same PSK as the basis for the session
 
 
 ---
@@ -88,28 +90,31 @@ The following demo uses a [swtpm](https://github.com/stefanberger/swtpm) since i
 
 It also uses [tpm2_tools](https://github.com/tpm2-software/tpm2-tools) to generate the HMAC key
 
-So, start the swtpm and create an HMAC key:
+So, start the swtpm and create an HMAC key.
+
+You can either use the swtpm built into this repo, or uncomment the sections below to create your own from scratch
 
 ```bash
 cd client/
 #rm -rf myvtpm && mkdir myvtpm && swtpm_setup --tpmstate myvtpm --tpm2 --ecc  --create-ek-cert
 swtpm socket --tpmstate dir=myvtpm --tpm2 --server type=tcp,port=2321 --ctrl type=tcp,port=2322 --flags not-need-init,startup-clear --log level=5
 
-export TPM2TOOLS_TCTI="swtpm:port=2321"
-export TPM2OPENSSL_TCTI="swtpm:port=2321"
-
-export secret="my_api_key"
-echo -n $secret > hmac.key
-hexkey=$(xxd -p -c 256 < hmac.key)
-# $ echo $hexkey
-# 6d795f6170695f6b6579
+# export secret="my_api_key"
+# echo -n $secret > hmac.key
+# hexkey=$(xxd -p -c 256 < hmac.key)
+# echo $hexkey
+#   6d795f6170695f6b6579
 ```
 
 the hex key we're using is `6d795f6170695f6b6579`.  Since this is a demo, we're just going to assume the server knows this value too
 
-Import the key using `tpm2_tools`
+Import the key using `tpm2_tools` but if you just want to use the default swtpm here, skip this step entirely
 
 ```bash
+export TPM2TOOLS_TCTI="swtpm:port=2321"
+export TPM2OPENSSL_TCTI="swtpm:port=2321"
+
+
 printf '\x00\x00' > unique.dat
 tpm2_createprimary -C o -G ecc  -g sha256  -c primary.ctx -a "fixedtpm|fixedparent|sensitivedataorigin|userwithauth|noda|restricted|decrypt" -u unique.dat
 
@@ -121,7 +126,6 @@ tpm2_encodeobject -C primary.ctx -u hmac.pub -r hmac.priv -o tpm-key.pem
 
 Note, you can securely transfer the key from the server to the client using [tpmcopy](https://github.com/salrashid123/tpmcopy)
 
-
 ## Server
 
 Now start the server. Note the server as the psk for this client id alrady
@@ -131,7 +135,6 @@ cd server
 pip3 install flask
 python3 server.py 
 ```
-
 
 ## Client
 
