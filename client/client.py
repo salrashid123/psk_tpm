@@ -45,7 +45,7 @@ ectx.startup(TPM2_SU.CLEAR)
 inSensitive = TPM2B_SENSITIVE_CREATE()
 primary1, parent, _, _, _ = ectx.create_primary(inSensitive,  TPM2B_PUBLIC(publicArea=_parent_ecc_template))
 
-f = open("/tmp/tpm-key.pem", "r")
+f = open("tpm-key.pem", "r")
 k = TSSPrivKey.from_pem(f.read().encode("utf-8"))
 
 hmacKeyHandle = ectx.load(primary1, k.private, k.public)
