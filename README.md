@@ -69,6 +69,8 @@ the full flow is something like this
 9. TLS Session established since both ends use the same PSK as the basis for the session
 
 
+Also note that in step 2, the client identity is just an encoded JSON message.  If you want, you can protect it by issuing an HMAC signed JWT (`HS256`) too using the TPM embedded key
+
 ---
 
 Also see
